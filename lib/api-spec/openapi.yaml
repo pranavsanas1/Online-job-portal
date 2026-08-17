@@ -1,0 +1,284 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: jobs
+    description: Job discovery operations
+  - name: applications
+    description: Candidate application operations
+  - name: hr
+    description: HR dashboard and review operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List available jobs
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - name: category
+          in: query
+          required: false
+          schema: { type: string }
+        - name: workMode
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Remote, Hybrid, "On-site"]
+        - name: jobType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Full-time, "Part-time", Contract, Internship]
+      responses:
+        "200":
+          description: Available jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Job" }
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Create a job listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JobInput" }
+      responses:
+        "201":
+          description: Created job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get a job listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: number }
+      responses:
+        "200":
+          description: Job listing
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Job" }
+        "404":
+          description: Job not found
+  /applications:
+    get:
+      operationId: listCandidateApplications
+      tags: [applications]
+      summary: List applications for a candidate
+      parameters:
+        - name: candidateEmail
+          in: query
+          required: true
+          schema: { type: string, minLength: 3 }
+      responses:
+        "200":
+          description: Candidate applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Application" }
+    post:
+      operationId: createApplication
+      tags: [applications]
+      summary: Submit an application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplicationInput" }
+      responses:
+        "201":
+          description: Submitted application
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+        "409":
+          description: Candidate has already applied
+  /hr/dashboard:
+    get:
+      operationId: getHrDashboard
+      tags: [hr]
+      summary: Get HR overview metrics
+      responses:
+        "200":
+          description: HR metrics and recent activity
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HrDashboard" }
+  /hr/applications:
+    get:
+      operationId: listHrApplications
+      tags: [hr]
+      summary: List all applications for HR review
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [New, Reviewing, Shortlisted, Rejected, Hired]
+      responses:
+        "200":
+          description: Applications for review
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Application" }
+  /hr/applications/{id}:
+    patch:
+      operationId: updateApplicationStatus
+      tags: [hr]
+      summary: Update an application status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: number }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplicationStatusUpdate" }
+      responses:
+        "200":
+          description: Updated application
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Application" }
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Job:
+      type: object
+      required: [id, title, company, location, workMode, jobType, category, salary, description, skills, postedAt, featured]
+      properties:
+        id: { type: number }
+        title: { type: string }
+        company: { type: string }
+        location: { type: string }
+        workMode:
+          type: string
+          enum: [Remote, Hybrid, "On-site"]
+        jobType:
+          type: string
+          enum: [Full-time, "Part-time", Contract, Internship]
+        category: { type: string }
+        salary: { type: string }
+        description: { type: string }
+        skills:
+          type: array
+          items: { type: string }
+        postedAt: { type: string, format: date-time }
+        featured: { type: boolean }
+    JobInput:
+      type: object
+      required: [title, company, location, workMode, jobType, category, salary, description, skills]
+      properties:
+        title: { type: string, minLength: 2 }
+        company: { type: string, minLength: 2 }
+        location: { type: string, minLength: 2 }
+        workMode:
+          type: string
+          enum: [Remote, Hybrid, "On-site"]
+        jobType:
+          type: string
+          enum: [Full-time, "Part-time", Contract, Internship]
+        category: { type: string, minLength: 2 }
+        salary: { type: string, minLength: 2 }
+        description: { type: string, minLength: 20 }
+        skills:
+          type: array
+          minItems: 1
+          items: { type: string }
+    Application:
+      type: object
+      required: [id, jobId, jobTitle, company, candidateName, candidateEmail, phone, resumeUrl, coverNote, status, appliedAt]
+      properties:
+        id: { type: number }
+        jobId: { type: number }
+        jobTitle: { type: string }
+        company: { type: string }
+        candidateName: { type: string }
+        candidateEmail: { type: string, minLength: 3 }
+        phone: { type: string }
+        resumeUrl: { type: string }
+        coverNote: { type: string }
+        status:
+          type: string
+          enum: [New, Reviewing, Shortlisted, Rejected, Hired]
+        appliedAt: { type: string, format: date-time }
+    ApplicationInput:
+      type: object
+      required: [jobId, candidateName, candidateEmail, phone, resumeUrl, coverNote]
+      properties:
+        jobId: { type: number }
+        candidateName: { type: string, minLength: 2 }
+        candidateEmail: { type: string, minLength: 3 }
+        phone: { type: string, minLength: 8 }
+        resumeUrl: { type: string, minLength: 3 }
+        coverNote: { type: string, minLength: 20 }
+    ApplicationStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [New, Reviewing, Shortlisted, Rejected, Hired]
+    HrDashboard:
+      type: object
+      required: [totalJobs, totalApplications, newApplications, shortlisted, hired, recentApplications]
+      properties:
+        totalJobs: { type: number }
+        totalApplications: { type: number }
+        newApplications: { type: number }
+        shortlisted: { type: number }
+        hired: { type: number }
+        recentApplications:
+          type: array
+          items: { $ref: "#/components/schemas/Application" }
+
