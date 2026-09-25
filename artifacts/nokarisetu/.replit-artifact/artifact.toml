@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "NokariSetu Job Portal"
+description = "A role-based online job portal for seekers, recruiters, and administrators with application tracking, moderation workflows, language preferences, and email-ready notifications."
+version = "1.0.0"
+id = "artifacts/nokarisetu"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25000
+
+[services.development]
+run = "pnpm --filter @workspace/nokarisetu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nokarisetu", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/nokarisetu/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25000"
+BASE_PATH = "/"
