@@ -308,7 +308,7 @@ function Button({ children, className, variant = 'primary', ...props }: ButtonHT
 
 function LoginPage({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   const { language, setLanguage, t } = useLanguage();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>('register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
