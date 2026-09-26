@@ -131,6 +131,41 @@ router.post("/auth/login", (req, res) => {
   res.json({ user: publicUser(account) });
 });
 
+router.post("/auth/register", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+
+  if (name.length < 2 || name.length > 80) {
+    res.status(400).json({ error: "Enter a name between 2 and 80 characters" });
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Enter a valid email address" });
+    return;
+  }
+
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  if (accounts.some((candidate) => candidate.email === email)) {
+    res.status(409).json({ error: "An account with this email already exists" });
+    return;
+  }
+
+  const account = createAccount(email, name, "seeker", randomBytes(16).toString("hex"), "", password);
+  accounts.push(account);
+
+  const token = randomBytes(32).toString("hex");
+  sessions.set(token, { user: publicUser(account), expiresAt: Date.now() + SESSION_TTL_MS });
+  res.cookie(SESSION_COOKIE, token, sessionCookieOptions());
+  res.status(201).json({ user: publicUser(account) });
+});
+
 router.post("/auth/logout", (req, res) => {
   res.set("Cache-Control", "no-store");
   const token = req.cookies?.[SESSION_COOKIE];
