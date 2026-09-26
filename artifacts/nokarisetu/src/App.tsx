@@ -87,6 +87,8 @@ const languageTranslations: Record<Language, Record<string, string>> = {
     secureAccess: 'Secure access', signIn: 'Sign in', signingIn: 'Signing in…', password: 'Password',
     signInTitle: 'A more considered way to find work.', signInDetail: 'Sign in to your own workspace. Your role controls which tools and data you can access.',
     demoAccess: 'Demo access', chooseAccount: 'Choose a role to fill its demo credentials.', demoOnly: 'These are demo accounts for this preview. Use unique credentials before production.',
+    createAccount: 'Create account', registering: 'Creating account…', fullName: 'Full name', confirmPassword: 'Confirm password',
+    newUser: 'New to NokariSetu?', signUp: 'Sign up', backToSignIn: 'Back to sign in', registrationDetail: 'Create a job seeker account to start using NokariSetu.',
   },
   'हिन्दी': {
     overview: 'अवलोकन', jobs: 'नौकरियां', applications: 'आवेदन', users: 'उपयोगकर्ता', settings: 'सेटिंग्स',
@@ -306,27 +308,35 @@ function Button({ children, className, variant = 'primary', ...props }: ButtonHT
 
 function LoginPage({ onLogin }: { onLogin: (user: AuthUser) => void }) {
   const { language, setLanguage, t } = useLanguage();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
+  const isRegistering = mode === 'register';
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPending(true);
     setError('');
+    if (isRegistering && password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setPending(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(isRegistering ? '/api/auth/register' : '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(isRegistering ? { name, email, password } : { email, password }),
       });
       const body = await response.json() as { user?: AuthUser; error?: string };
-      if (!response.ok || !body.user) throw new Error(body.error ?? 'Unable to sign in');
+      if (!response.ok || !body.user) throw new Error(body.error ?? (isRegistering ? 'Unable to create account' : 'Unable to sign in'));
       onLogin(body.user);
-    } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in');
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : (isRegistering ? 'Unable to create account' : 'Unable to sign in'));
     } finally {
       setPending(false);
     }
@@ -343,7 +353,60 @@ function LoginPage({ onLogin }: { onLogin: (user: AuthUser) => void }) {
     setError('');
   };
 
-  return <div className="grain flex min-h-[100dvh] items-center justify-center bg-background px-5 py-10 text-foreground"><div className="w-full max-w-5xl"><div className="mb-8 flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-primary font-display text-xl font-bold text-primary-foreground">N</span><div><p className="font-display text-xl font-semibold tracking-[-0.03em]">NokariSetu</p><p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Work, with direction</p></div></div><label className="flex items-center gap-2 text-xs font-bold text-muted-foreground"><Globe2 size={15} /><span className="sr-only">{t('language')}</span><select data-testid="select-language-login" value={language} onChange={(event) => setLanguage(event.target.value as Language)} className="focus-ring rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-foreground">{supportedLanguages.map((option) => <option key={option} value={option}>{option}</option>)}</select></label></div><div className="grid overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_24px_70px_hsl(216_39%_18%_/_0.12)] lg:grid-cols-[.9fr_1.1fr]"><section className="bg-primary px-7 py-10 text-primary-foreground sm:px-10 sm:py-14"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground/65">NokariSetu</p><h1 className="mt-5 max-w-md font-display text-4xl font-semibold leading-[1.05] tracking-[-0.06em] sm:text-5xl">{language === 'English' ? 'A more considered way to find work.' : t('signInTitle')}</h1><p className="mt-5 max-w-md text-sm leading-6 text-primary-foreground/75">{language === 'English' ? 'Sign in to your own workspace. Your role controls which tools and data you can access.' : t('signInDetail')}</p><div className="mt-10 space-y-3 text-sm"><p className="font-bold">{t('demoAccess')}</p><p className="text-primary-foreground/70">{t('chooseAccount')}</p><div className="grid gap-2 sm:grid-cols-3">{(['seeker', 'recruiter', 'admin'] as Role[]).map((demoRole) => <button key={demoRole} type="button" onClick={() => useDemoAccount(demoRole)} className="rounded-xl border border-primary-foreground/20 px-3 py-3 text-left text-xs font-bold transition-colors hover:bg-primary-foreground/10">{demoRole === 'seeker' ? t('jobSeeker') : demoRole === 'recruiter' ? t('recruiter') : t('administrator')}<span className="mt-1 block text-[10px] font-normal text-primary-foreground/60">Use demo</span></button>)}</div></div></section><section className="px-7 py-10 sm:px-10 sm:py-14"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">{t('secureAccess')}</p><h2 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em]">{t('signIn')}</h2><p className="mt-2 text-sm text-muted-foreground">{t('signInDetail')}</p><form onSubmit={submit} className="mt-8 space-y-5"><Field name="login-email" label={t('emailAddress')} type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /><Field name="login-password" label={t('password')} type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />{error && <p role="alert" className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}<Button data-testid="button-login" type="submit" disabled={pending} className="w-full">{pending ? t('signingIn') : t('signIn')} <ArrowRight size={16} /></Button></form><p className="mt-6 text-center text-xs leading-5 text-muted-foreground">{t('demoOnly')}</p></section></div></div></div>;
+  const switchMode = () => {
+    setMode(isRegistering ? 'login' : 'register');
+    setName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setError('');
+  };
+
+  return (
+    <div className="grain flex min-h-[100dvh] items-center justify-center bg-background px-5 py-10 text-foreground">
+      <div className="w-full max-w-5xl">
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-primary font-display text-xl font-bold text-primary-foreground">N</span>
+            <div><p className="font-display text-xl font-semibold tracking-[-0.03em]">NokariSetu</p><p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Work, with direction</p></div>
+          </div>
+          <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+            <Globe2 size={15} /><span className="sr-only">{t('language')}</span>
+            <select data-testid="select-language-login" value={language} onChange={(event) => setLanguage(event.target.value as Language)} className="focus-ring rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-foreground">
+              {supportedLanguages.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="grid overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_24px_70px_hsl(216_39%_18%_/_0.12)] lg:grid-cols-[.9fr_1.1fr]">
+          <section className="bg-primary px-7 py-10 text-primary-foreground sm:px-10 sm:py-14">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground/65">NokariSetu</p>
+            <h1 className="mt-5 max-w-md font-display text-4xl font-semibold leading-[1.05] tracking-[-0.06em] sm:text-5xl">{language === 'English' ? 'A more considered way to find work.' : t('signInTitle')}</h1>
+            <p className="mt-5 max-w-md text-sm leading-6 text-primary-foreground/75">{isRegistering ? t('registrationDetail') : language === 'English' ? 'Sign in to your own workspace. Your role controls which tools and data you can access.' : t('signInDetail')}</p>
+            {!isRegistering && <div className="mt-10 space-y-3 text-sm">
+              <p className="font-bold">{t('demoAccess')}</p>
+              <p className="text-primary-foreground/70">{t('chooseAccount')}</p>
+              <div className="grid gap-2 sm:grid-cols-3">{(['seeker', 'recruiter', 'admin'] as Role[]).map((demoRole) => <button key={demoRole} type="button" onClick={() => useDemoAccount(demoRole)} className="rounded-xl border border-primary-foreground/20 px-3 py-3 text-left text-xs font-bold transition-colors hover:bg-primary-foreground/10">{demoRole === 'seeker' ? t('jobSeeker') : demoRole === 'recruiter' ? t('recruiter') : t('administrator')}<span className="mt-1 block text-[10px] font-normal text-primary-foreground/60">Use demo</span></button>)}</div>
+            </div>}
+          </section>
+          <section className="px-7 py-10 sm:px-10 sm:py-14">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">{t('secureAccess')}</p>
+            <h2 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em]">{isRegistering ? t('createAccount') : t('signIn')}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{isRegistering ? t('registrationDetail') : t('signInDetail')}</p>
+            <form onSubmit={submit} className="mt-8 space-y-5">
+              {isRegistering && <Field name="register-name" label={t('fullName')} autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required />}
+              <Field name="login-email" label={t('emailAddress')} type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+              <Field name="login-password" label={t('password')} type="password" autoComplete={isRegistering ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} required />
+              {isRegistering && <Field name="confirm-password" label={t('confirmPassword')} type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />}
+              {error && <p role="alert" className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
+              <Button data-testid={isRegistering ? 'button-register' : 'button-login'} type="submit" disabled={pending} className="w-full">{pending ? t('registering') : isRegistering ? t('createAccount') : t('signIn')} <ArrowRight size={16} /></Button>
+            </form>
+            <button type="button" onClick={switchMode} className="mt-5 w-full text-center text-sm font-bold text-primary hover:underline">{isRegistering ? t('backToSignIn') : `${t('newUser')} ${t('signUp')}`}</button>
+            {!isRegistering && <p className="mt-6 text-center text-xs leading-5 text-muted-foreground">{t('demoOnly')}</p>}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SectionHeading({ eyebrow, title, detail, action }: { eyebrow: string; title: string; detail?: string; action?: ReactNode }) {
