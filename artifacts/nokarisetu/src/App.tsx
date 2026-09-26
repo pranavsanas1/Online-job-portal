@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ButtonHTMLAttributes, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ButtonHTMLAttributes, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -59,6 +59,121 @@ const queryClient = new QueryClient();
 type Role = 'seeker' | 'recruiter' | 'admin';
 type ApplicationStatus = 'pending' | 'accepted' | 'rejected';
 type UserStatus = 'pending' | 'accepted' | 'removed';
+type Language = 'English' | 'हिन्दी' | 'मराठी' | 'বাংলা';
+
+const supportedLanguages: Language[] = ['English', 'हिन्दी', 'मराठी', 'বাংলা'];
+const languageTranslations: Record<Language, Record<string, string>> = {
+  English: {
+    overview: 'Overview', jobs: 'Jobs', applications: 'Applications', users: 'Users', settings: 'Settings',
+    workspace: 'Workspace', platformStatus: 'Platform status', live: 'Live', demo: 'Demo',
+    jobSeeker: 'Job seeker', recruiter: 'Recruiter', administrator: 'Administrator',
+    goodToSeeYou: 'Good to see you', dashboard: 'dashboard', seekerHeadline: 'Your next move is closer than it feels.', recruiterHeadline: 'A clearer view of the people behind every application.', adminHeadline: 'Keep the marketplace worthy of people’s time.', findNextStep: 'Find your next step',
+    whatsNew: 'What’s new', smallNudge: 'A small nudge', clarityCompounds: 'Clarity compounds.',
+    clarityDetail: 'Every useful detail in your profile gives the right people a better reason to start a conversation.',
+    tuneProfile: 'Tune your profile', recentActivity: 'Recent activity', manageAlerts: 'Manage alerts',
+    keepMoving: 'Keep moving', nextUsefulAction: 'Your next useful action', completeProfile: 'Complete your profile',
+    exploreFreshRoles: 'Explore fresh roles', openNewRole: 'Open a new role', reviewCandidates: 'Review candidates',
+    clearModeration: 'Clear moderation queue', auditListings: 'Audit live listings',
+    yourPreferences: 'Your preferences', makeWorkspaceYours: 'Make this workspace yours',
+    preferencesDetail: 'Choose the language, rhythm, and profile details that make NokariSetu useful every time you return.',
+    displayName: 'Display name', emailAddress: 'Email address', saveProfile: 'Save profile',
+    language: 'Language', languageDetail: 'Your labels and guidance will follow this choice.',
+    notifications: 'Notifications', notificationsDetail: 'Useful signals only, never noise.',
+    roleUpdates: 'Role updates', roleUpdatesDetail: 'When an application or listing changes',
+    weeklyDigest: 'Weekly digest', weeklyDigestDetail: 'A quiet Monday view of what matters',
+    productNotes: 'Product notes', productNotesDetail: 'Occasional tips from the NokariSetu team',
+    savedJustNow: 'Saved just now', savePreferences: 'Save preferences', demoWorkspace: 'Demo workspace',
+    preferencesSaved: 'Your preferences are saved', languageChanged: 'Language changed',
+    secureAccess: 'Secure access', signIn: 'Sign in', signingIn: 'Signing in…', password: 'Password',
+    signInTitle: 'A more considered way to find work.', signInDetail: 'Sign in to your own workspace. Your role controls which tools and data you can access.',
+    demoAccess: 'Demo access', chooseAccount: 'Choose a role to fill its demo credentials.', demoOnly: 'These are demo accounts for this preview. Use unique credentials before production.',
+  },
+  'हिन्दी': {
+    overview: 'अवलोकन', jobs: 'नौकरियां', applications: 'आवेदन', users: 'उपयोगकर्ता', settings: 'सेटिंग्स',
+    workspace: 'कार्यस्थल', platformStatus: 'प्लेटफ़ॉर्म स्थिति', live: 'सक्रिय', demo: 'डेमो',
+    jobSeeker: 'नौकरी खोजने वाला', recruiter: 'भर्ती प्रबंधक', administrator: 'व्यवस्थापक',
+    goodToSeeYou: 'आपसे मिलकर अच्छा लगा', dashboard: 'डैशबोर्ड', seekerHeadline: 'आपका अगला कदम आपकी सोच से भी करीब है।', recruiterHeadline: 'हर आवेदन के पीछे मौजूद लोगों को बेहतर तरीके से समझें।', adminHeadline: 'मार्केटप्लेस को सभी के लिए भरोसेमंद बनाए रखें।', findNextStep: 'अगला कदम खोजें',
+    whatsNew: 'नया क्या है', smallNudge: 'एक छोटा सुझाव', clarityCompounds: 'स्पष्टता से प्रगति होती है।',
+    clarityDetail: 'आपकी प्रोफ़ाइल की हर उपयोगी जानकारी सही लोगों को आपसे बातचीत शुरू करने का बेहतर कारण देती है।',
+    tuneProfile: 'प्रोफ़ाइल सुधारें', recentActivity: 'हाल की गतिविधि', manageAlerts: 'अलर्ट प्रबंधित करें',
+    keepMoving: 'आगे बढ़ते रहें', nextUsefulAction: 'आपका अगला उपयोगी कदम', completeProfile: 'प्रोफ़ाइल पूरी करें',
+    exploreFreshRoles: 'नई नौकरियां देखें', openNewRole: 'नई भूमिका खोलें', reviewCandidates: 'उम्मीदवार देखें',
+    clearModeration: 'समीक्षा कतार साफ़ करें', auditListings: 'लाइव लिस्टिंग जांचें',
+    yourPreferences: 'आपकी पसंद', makeWorkspaceYours: 'इस कार्यस्थल को अपना बनाएं',
+    preferencesDetail: 'भाषा, लय और प्रोफ़ाइल विवरण चुनें ताकि NokariSetu हर बार आपके लिए उपयोगी रहे।',
+    displayName: 'प्रदर्शित नाम', emailAddress: 'ईमेल पता', saveProfile: 'प्रोफ़ाइल सहेजें',
+    language: 'भाषा', languageDetail: 'आपके लेबल और मार्गदर्शन इसी पसंद के अनुसार बदलेंगे।',
+    notifications: 'सूचनाएं', notificationsDetail: 'सिर्फ़ उपयोगी संकेत, कोई शोर नहीं।',
+    roleUpdates: 'भूमिका अपडेट', roleUpdatesDetail: 'जब आवेदन या लिस्टिंग में बदलाव हो',
+    weeklyDigest: 'साप्ताहिक सारांश', weeklyDigestDetail: 'महत्वपूर्ण बातों की सोमवार की शांत झलक',
+    productNotes: 'उत्पाद नोट्स', productNotesDetail: 'NokariSetu टीम की कभी-कभार उपयोगी जानकारी',
+    savedJustNow: 'अभी सहेजा गया', savePreferences: 'पसंद सहेजें', demoWorkspace: 'डेमो कार्यस्थल',
+    preferencesSaved: 'आपकी पसंद सहेज दी गई है', languageChanged: 'भाषा बदल दी गई',
+    secureAccess: 'सुरक्षित प्रवेश', signIn: 'साइन इन', signingIn: 'साइन इन हो रहा है…', password: 'पासवर्ड',
+    signInTitle: 'काम खोजने का एक बेहतर तरीका।', signInDetail: 'अपने कार्यस्थल में साइन इन करें। आपकी भूमिका तय करती है कि आप कौन से टूल और डेटा देख सकते हैं।',
+    demoAccess: 'डेमो प्रवेश', chooseAccount: 'डेमो विवरण भरने के लिए एक भूमिका चुनें।', demoOnly: 'ये इस प्रीव्यू के डेमो खाते हैं। प्रोडक्शन से पहले अलग क्रेडेंशियल रखें।',
+  },
+  'मराठी': {
+    overview: 'आढावा', jobs: 'नोकऱ्या', applications: 'अर्ज', users: 'वापरकर्ते', settings: 'सेटिंग्ज',
+    workspace: 'वर्कस्पेस', platformStatus: 'प्लॅटफॉर्म स्थिती', live: 'लाइव्ह', demo: 'डेमो',
+    jobSeeker: 'नोकरी शोधणारा', recruiter: 'भरती व्यवस्थापक', administrator: 'प्रशासक',
+    goodToSeeYou: 'तुम्हाला पाहून आनंद झाला', dashboard: 'डॅशबोर्ड', seekerHeadline: 'तुमचे पुढील पाऊल तुम्हाला वाटते त्यापेक्षा जवळ आहे.', recruiterHeadline: 'प्रत्येक अर्जामागील व्यक्तींचे अधिक स्पष्ट चित्र.', adminHeadline: 'मार्केटप्लेस सर्वांसाठी विश्वासार्ह ठेवा.', findNextStep: 'पुढील पाऊल शोधा',
+    whatsNew: 'नवीन काय आहे', smallNudge: 'एक छोटी सूचना', clarityCompounds: 'स्पष्टतेमुळे प्रगती होते.',
+    clarityDetail: 'तुमच्या प्रोफाइलमधील प्रत्येक उपयुक्त माहिती योग्य लोकांना संवाद सुरू करण्याचे चांगले कारण देते.',
+    tuneProfile: 'प्रोफाइल सुधारा', recentActivity: 'अलीकडील हालचाल', manageAlerts: 'अलर्ट व्यवस्थापित करा',
+    keepMoving: 'पुढे जात राहा', nextUsefulAction: 'तुमचे पुढील उपयुक्त पाऊल', completeProfile: 'प्रोफाइल पूर्ण करा',
+    exploreFreshRoles: 'नवीन नोकऱ्या पहा', openNewRole: 'नवीन भूमिका उघडा', reviewCandidates: 'उमेदवार पहा',
+    clearModeration: 'मॉडरेशन रांग साफ करा', auditListings: 'लाइव्ह लिस्टिंग तपासा',
+    yourPreferences: 'तुमच्या पसंती', makeWorkspaceYours: 'हा वर्कस्पेस तुमचा बनवा',
+    preferencesDetail: 'NokariSetu प्रत्येक वेळी उपयुक्त राहण्यासाठी भाषा, लय आणि प्रोफाइल तपशील निवडा.',
+    displayName: 'दर्शविलेले नाव', emailAddress: 'ईमेल पत्ता', saveProfile: 'प्रोफाइल जतन करा',
+    language: 'भाषा', languageDetail: 'तुमचे लेबल आणि मार्गदर्शन या निवडीप्रमाणे बदलेल.',
+    notifications: 'सूचना', notificationsDetail: 'फक्त उपयुक्त संकेत, अनावश्यक गोंधळ नाही.',
+    roleUpdates: 'भूमिका अपडेट', roleUpdatesDetail: 'अर्ज किंवा लिस्टिंगमध्ये बदल झाल्यावर',
+    weeklyDigest: 'साप्ताहिक सारांश', weeklyDigestDetail: 'महत्त्वाच्या गोष्टींचा सोमवारचा शांत आढावा',
+    productNotes: 'उत्पादन टिपा', productNotesDetail: 'NokariSetu टीमकडून अधूनमधून उपयुक्त टिपा',
+    savedJustNow: 'आत्ताच जतन केले', savePreferences: 'पसंती जतन करा', demoWorkspace: 'डेमो वर्कस्पेस',
+    preferencesSaved: 'तुमच्या पसंती जतन केल्या आहेत', languageChanged: 'भाषा बदलली',
+    secureAccess: 'सुरक्षित प्रवेश', signIn: 'साइन इन', signingIn: 'साइन इन होत आहे…', password: 'पासवर्ड',
+    signInTitle: 'नोकरी शोधण्याचा अधिक विचारपूर्वक मार्ग.', signInDetail: 'तुमच्या वर्कस्पेसमध्ये साइन इन करा. कोणती साधने आणि माहिती दिसेल हे तुमची भूमिका ठरवते.',
+    demoAccess: 'डेमो प्रवेश', chooseAccount: 'डेमो तपशील भरण्यासाठी भूमिका निवडा.', demoOnly: 'ही या प्रीव्ह्यूसाठी डेमो खाती आहेत. प्रोडक्शनपूर्वी वेगळी क्रेडेन्शियल्स वापरा.',
+  },
+  'বাংলা': {
+    overview: 'ওভারভিউ', jobs: 'চাকরি', applications: 'আবেদন', users: 'ব্যবহারকারী', settings: 'সেটিংস',
+    workspace: 'ওয়ার্কস্পেস', platformStatus: 'প্ল্যাটফর্মের অবস্থা', live: 'সক্রিয়', demo: 'ডেমো',
+    jobSeeker: 'চাকরিপ্রার্থী', recruiter: 'নিয়োগকারী', administrator: 'অ্যাডমিনিস্ট্রেটর',
+    goodToSeeYou: 'আপনাকে দেখে ভালো লাগছে', dashboard: 'ড্যাশবোর্ড', seekerHeadline: 'আপনার পরের পদক্ষেপ যতটা মনে হচ্ছে তার চেয়েও কাছে।', recruiterHeadline: 'প্রতিটি আবেদনের পিছনের মানুষগুলোর আরও পরিষ্কার ছবি।', adminHeadline: 'মার্কেটপ্লেসকে সবার জন্য বিশ্বাসযোগ্য রাখুন।', findNextStep: 'পরের ধাপ খুঁজুন',
+    whatsNew: 'নতুন কী আছে', smallNudge: 'একটি ছোট পরামর্শ', clarityCompounds: 'স্বচ্ছতা অগ্রগতি আনে।',
+    clarityDetail: 'আপনার প্রোফাইলের প্রতিটি দরকারী তথ্য সঠিক মানুষকে কথোপকথন শুরু করার ভালো কারণ দেয়।',
+    tuneProfile: 'প্রোফাইল ঠিক করুন', recentActivity: 'সাম্প্রতিক কার্যকলাপ', manageAlerts: 'অ্যালার্ট পরিচালনা করুন',
+    keepMoving: 'এগিয়ে চলুন', nextUsefulAction: 'আপনার পরের দরকারী কাজ', completeProfile: 'প্রোফাইল সম্পূর্ণ করুন',
+    exploreFreshRoles: 'নতুন চাকরি দেখুন', openNewRole: 'নতুন পদ খুলুন', reviewCandidates: 'প্রার্থীদের দেখুন',
+    clearModeration: 'মডারেশন সারি পরিষ্কার করুন', auditListings: 'লাইভ লিস্টিং পরীক্ষা করুন',
+    yourPreferences: 'আপনার পছন্দ', makeWorkspaceYours: 'এই ওয়ার্কস্পেসটি নিজের মতো করুন',
+    preferencesDetail: 'NokariSetu-কে প্রতিবার দরকারী রাখতে ভাষা, ছন্দ এবং প্রোফাইলের তথ্য বেছে নিন।',
+    displayName: 'প্রদর্শিত নাম', emailAddress: 'ইমেল ঠিকানা', saveProfile: 'প্রোফাইল সংরক্ষণ করুন',
+    language: 'ভাষা', languageDetail: 'আপনার লেবেল ও নির্দেশনা এই পছন্দ অনুযায়ী বদলাবে।',
+    notifications: 'বিজ্ঞপ্তি', notificationsDetail: 'শুধু দরকারী সংকেত, কোনো বিরক্তি নয়।',
+    roleUpdates: 'পদের আপডেট', roleUpdatesDetail: 'আবেদন বা লিস্টিং বদলালে',
+    weeklyDigest: 'সাপ্তাহিক সারাংশ', weeklyDigestDetail: 'গুরুত্বপূর্ণ বিষয়ের শান্ত সোমবারের ঝলক',
+    productNotes: 'পণ্য সংক্রান্ত নোট', productNotesDetail: 'NokariSetu টিমের মাঝে মাঝে দরকারী টিপস',
+    savedJustNow: 'এইমাত্র সংরক্ষিত', savePreferences: 'পছন্দ সংরক্ষণ করুন', demoWorkspace: 'ডেমো ওয়ার্কস্পেস',
+    preferencesSaved: 'আপনার পছন্দ সংরক্ষণ করা হয়েছে', languageChanged: 'ভাষা পরিবর্তন করা হয়েছে',
+    secureAccess: 'নিরাপদ প্রবেশ', signIn: 'সাইন ইন', signingIn: 'সাইন ইন হচ্ছে…', password: 'পাসওয়ার্ড',
+    signInTitle: 'কাজ খোঁজার আরও ভাবনাচিন্তাপূর্ণ উপায়।', signInDetail: 'নিজের ওয়ার্কস্পেসে সাইন ইন করুন। কোন টুল ও তথ্য দেখবেন তা আপনার ভূমিকা ঠিক করে।',
+    demoAccess: 'ডেমো প্রবেশ', chooseAccount: 'ডেমো তথ্য পূরণ করতে একটি ভূমিকা বেছে নিন।', demoOnly: 'এগুলি এই প্রিভিউয়ের ডেমো অ্যাকাউন্ট। প্রোডাকশনের আগে আলাদা ক্রেডেনশিয়াল ব্যবহার করুন।',
+  },
+};
+
+const LanguageContext = createContext<{ language: Language; setLanguage: (language: Language) => void; t: (key: string) => string }>({
+  language: 'English',
+  setLanguage: () => undefined,
+  t: (key) => languageTranslations.English[key] ?? key,
+});
+
+function useLanguage() {
+  return useContext(LanguageContext);
+}
 
 type Metric = { label: string; value: string; change: string; tone: string };
 type ActivityItem = { id: number; title: string; detail: string; time: string; tone: string };
@@ -74,6 +189,7 @@ type ApplicationData = {
 type UserData = {
   id: number; name: string; email: string; role: Role; joined: string; status: UserStatus;
 };
+type AuthUser = { email: string; name: string; role: Role };
 
 const fallbackDashboard: Record<Role, DashboardData> = {
   seeker: {
@@ -188,6 +304,48 @@ function Button({ children, className, variant = 'primary', ...props }: ButtonHT
   );
 }
 
+function LoginPage({ onLogin }: { onLogin: (user: AuthUser) => void }) {
+  const { language, setLanguage, t } = useLanguage();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [pending, setPending] = useState(false);
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPending(true);
+    setError('');
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      const body = await response.json() as { user?: AuthUser; error?: string };
+      if (!response.ok || !body.user) throw new Error(body.error ?? 'Unable to sign in');
+      onLogin(body.user);
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in');
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const useDemoAccount = (role: Role) => {
+    const demoEmails = {
+      seeker: 'seeker@nokarisetu.in',
+      recruiter: 'recruiter@nokarisetu.in',
+      admin: 'admin@nokarisetu.in',
+    };
+    setEmail(demoEmails[role]);
+    setPassword('');
+    setError('');
+  };
+
+  return <div className="grain flex min-h-[100dvh] items-center justify-center bg-background px-5 py-10 text-foreground"><div className="w-full max-w-5xl"><div className="mb-8 flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-primary font-display text-xl font-bold text-primary-foreground">N</span><div><p className="font-display text-xl font-semibold tracking-[-0.03em]">NokariSetu</p><p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Work, with direction</p></div></div><label className="flex items-center gap-2 text-xs font-bold text-muted-foreground"><Globe2 size={15} /><span className="sr-only">{t('language')}</span><select data-testid="select-language-login" value={language} onChange={(event) => setLanguage(event.target.value as Language)} className="focus-ring rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold text-foreground">{supportedLanguages.map((option) => <option key={option} value={option}>{option}</option>)}</select></label></div><div className="grid overflow-hidden rounded-[28px] border border-border bg-card shadow-[0_24px_70px_hsl(216_39%_18%_/_0.12)] lg:grid-cols-[.9fr_1.1fr]"><section className="bg-primary px-7 py-10 text-primary-foreground sm:px-10 sm:py-14"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground/65">NokariSetu</p><h1 className="mt-5 max-w-md font-display text-4xl font-semibold leading-[1.05] tracking-[-0.06em] sm:text-5xl">{language === 'English' ? 'A more considered way to find work.' : t('signInTitle')}</h1><p className="mt-5 max-w-md text-sm leading-6 text-primary-foreground/75">{language === 'English' ? 'Sign in to your own workspace. Your role controls which tools and data you can access.' : t('signInDetail')}</p><div className="mt-10 space-y-3 text-sm"><p className="font-bold">{t('demoAccess')}</p><p className="text-primary-foreground/70">{t('chooseAccount')}</p><div className="grid gap-2 sm:grid-cols-3">{(['seeker', 'recruiter', 'admin'] as Role[]).map((demoRole) => <button key={demoRole} type="button" onClick={() => useDemoAccount(demoRole)} className="rounded-xl border border-primary-foreground/20 px-3 py-3 text-left text-xs font-bold transition-colors hover:bg-primary-foreground/10">{demoRole === 'seeker' ? t('jobSeeker') : demoRole === 'recruiter' ? t('recruiter') : t('administrator')}<span className="mt-1 block text-[10px] font-normal text-primary-foreground/60">Use demo</span></button>)}</div></div></section><section className="px-7 py-10 sm:px-10 sm:py-14"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">{t('secureAccess')}</p><h2 className="mt-3 font-display text-3xl font-semibold tracking-[-0.05em]">{t('signIn')}</h2><p className="mt-2 text-sm text-muted-foreground">{t('signInDetail')}</p><form onSubmit={submit} className="mt-8 space-y-5"><Field name="login-email" label={t('emailAddress')} type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /><Field name="login-password" label={t('password')} type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />{error && <p role="alert" className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}<Button data-testid="button-login" type="submit" disabled={pending} className="w-full">{pending ? t('signingIn') : t('signIn')} <ArrowRight size={16} /></Button></form><p className="mt-6 text-center text-xs leading-5 text-muted-foreground">{t('demoOnly')}</p></section></div></div></div>;
+}
+
 function SectionHeading({ eyebrow, title, detail, action }: { eyebrow: string; title: string; detail?: string; action?: ReactNode }) {
   return (
     <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -225,16 +383,17 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn('animate-pulse rounded-xl bg-muted', className)} />;
 }
 
-function Shell({ role, setRole, children, notify }: { role: Role; setRole: (role: Role) => void; children: ReactNode; notify: (message: string) => void }) {
+function Shell({ role, children, notify, onSignOut }: { role: Role; children: ReactNode; notify: (message: string) => void; onSignOut: () => void }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t } = useLanguage();
   const health = useHealthCheck({ query: { queryKey: getHealthCheckQueryKey(), staleTime: 60_000 } });
   const nav = [
-    { href: '/dashboard', label: 'Overview', icon: LayoutDashboard, roles: ['seeker', 'recruiter', 'admin'] },
-    { href: '/jobs', label: 'Jobs', icon: BriefcaseBusiness, roles: ['seeker', 'recruiter', 'admin'] },
-    { href: '/applications', label: 'Applications', icon: FileCheck2, roles: ['seeker', 'recruiter'] },
-    { href: '/users', label: 'Users', icon: UsersRound, roles: ['admin'] },
-    { href: '/settings', label: 'Settings', icon: Settings2, roles: ['seeker', 'recruiter', 'admin'] },
+    { href: '/dashboard', key: 'overview', icon: LayoutDashboard, roles: ['seeker', 'recruiter', 'admin'] },
+    { href: '/jobs', key: 'jobs', icon: BriefcaseBusiness, roles: ['seeker', 'recruiter', 'admin'] },
+    { href: '/applications', key: 'applications', icon: FileCheck2, roles: ['seeker', 'recruiter'] },
+    { href: '/users', key: 'users', icon: UsersRound, roles: ['admin'] },
+    { href: '/settings', key: 'settings', icon: Settings2, roles: ['seeker', 'recruiter', 'admin'] },
   ];
   return (
     <div className="grain app-shell min-h-[100dvh] text-foreground">
@@ -246,34 +405,25 @@ function Shell({ role, setRole, children, notify }: { role: Role; setRole: (role
           </Link>
           <button data-testid="button-close-menu" onClick={() => setMobileOpen(false)} className="rounded-lg p-2 text-sidebar-foreground/70 hover:bg-sidebar-accent lg:hidden"><X size={18} /></button>
         </div>
-        <label className="relative mt-8 block sm:hidden">
-          <span className="sr-only">Select demo role</span>
-          <select data-testid="select-role-sidebar" value={role} onChange={(e) => setRole(e.target.value as Role)} className="focus-ring w-full appearance-none rounded-xl border border-sidebar-border bg-sidebar-accent px-3 py-3 text-xs font-bold text-sidebar-foreground outline-none">
-            <option value="seeker">Job seeker view</option>
-            <option value="recruiter">Recruiter view</option>
-            <option value="admin">Admin view</option>
-          </select>
-          <ChevronDown size={14} className="pointer-events-none absolute right-3 top-3.5 text-sidebar-foreground/60" />
-        </label>
         <div className="mt-10">
-          <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/45">{roleCopy[role].eyebrow}</p>
+           <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-sidebar-foreground/45">{role === 'seeker' ? t('jobSeeker') : role === 'recruiter' ? t('recruiter') : t('administrator')}</p>
           <nav className="space-y-1">
             {nav.filter((item) => item.roles.includes(role)).map((item) => {
               const Icon = item.icon;
               const active = location === item.href || (item.href === '/dashboard' && location === '/');
-              return <Link key={item.href} href={item.href} data-testid={`link-nav-${item.label.toLowerCase()}`} onClick={() => setMobileOpen(false)} className={cn('group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors', active ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/68 hover:bg-sidebar-accent hover:text-sidebar-foreground')}><Icon size={18} strokeWidth={active ? 2.4 : 1.8} /><span>{item.label}</span>{active && <ArrowRight size={15} className="ml-auto" />}</Link>;
+               return <Link key={item.href} href={item.href} data-testid={`link-nav-${item.key}`} onClick={() => setMobileOpen(false)} className={cn('group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors', active ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground/68 hover:bg-sidebar-accent hover:text-sidebar-foreground')}><Icon size={18} strokeWidth={active ? 2.4 : 1.8} /><span>{t(item.key)}</span>{active && <ArrowRight size={15} className="ml-auto" />}</Link>;
             })}
           </nav>
         </div>
         <div className="mt-auto">
           <div className="mb-5 rounded-2xl border border-sidebar-border bg-sidebar-accent/60 p-4">
-            <div className="mb-3 flex items-center justify-between text-[11px] text-sidebar-foreground/65"><span className="flex items-center gap-2"><span className={cn('h-2 w-2 rounded-full', health.isError ? 'bg-accent' : 'bg-sidebar-primary')} />Platform status</span><span>{health.isError ? 'Demo' : 'Live'}</span></div>
+             <div className="mb-3 flex items-center justify-between text-[11px] text-sidebar-foreground/65"><span className="flex items-center gap-2"><span className={cn('h-2 w-2 rounded-full', health.isError ? 'bg-accent' : 'bg-sidebar-primary')} />{t('platformStatus')}</span><span>{health.isError ? t('demo') : t('live')}</span></div>
             <p className="text-xs leading-5 text-sidebar-foreground/80">A calmer way to move from browsing to belonging.</p>
           </div>
           <div className="flex items-center gap-3 border-t border-sidebar-border pt-5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent font-bold text-accent-foreground">{roleCopy[role].avatar}</div>
             <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-sidebar-foreground">{role === 'admin' ? 'Nokari team' : role === 'recruiter' ? 'Aarav Mehta' : 'Maya Shah'}</p><p className="text-xs text-sidebar-foreground/55">{roleCopy[role].label}</p></div>
-            <button data-testid="button-sign-out" aria-label="Sign out" onClick={() => notify('Demo mode keeps your workspace ready')} className="rounded-lg p-2 text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-foreground"><LogOut size={16} /></button>
+             <button data-testid="button-sign-out" aria-label="Sign out" onClick={onSignOut} className="rounded-lg p-2 text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-foreground"><LogOut size={16} /></button>
           </div>
         </div>
       </aside>
@@ -285,7 +435,7 @@ function Shell({ role, setRole, children, notify }: { role: Role; setRole: (role
             <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex"><span className="font-mono-ui text-[10px] uppercase tracking-[0.2em]">Workspace</span><ChevronDown size={13} /></div>
           </div>
           <div className="flex items-center gap-3">
-            <label className="relative hidden sm:block"><span className="sr-only">Select demo role</span><select data-testid="select-role-header" value={role} onChange={(e) => setRole(e.target.value as Role)} className="focus-ring appearance-none rounded-xl border border-border bg-card py-2.5 pl-3 pr-9 text-xs font-bold text-foreground"><option value="seeker">Job seeker view</option><option value="recruiter">Recruiter view</option><option value="admin">Admin view</option></select><ChevronDown size={14} className="pointer-events-none absolute right-3 top-3.5 text-muted-foreground" /></label>
+             <span className="hidden rounded-xl border border-border bg-card px-3 py-2.5 text-xs font-bold text-foreground sm:inline">{role === 'seeker' ? t('jobSeeker') : role === 'recruiter' ? t('recruiter') : t('administrator')}</span>
             <button data-testid="button-notifications" onClick={() => notify('You are all caught up')} className="relative rounded-xl border border-border bg-card p-2.5 text-muted-foreground hover:text-foreground"><Activity size={18} /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" /></button>
             <Link href="/settings" data-testid="link-header-settings" className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{roleCopy[role].avatar}</Link>
           </div>
@@ -297,23 +447,25 @@ function Shell({ role, setRole, children, notify }: { role: Role; setRole: (role
 }
 
 function DashboardPage({ role, notify }: { role: Role; notify: (message: string) => void }) {
+  const { t, language } = useLanguage();
   const query = useGetDashboard({ role }, { query: { queryKey: getGetDashboardQueryKey({ role }), staleTime: 30_000 } });
   const data = (query.data ?? fallbackDashboard[role]) as DashboardData;
+  const localizedHeadline = language === 'English' ? data.headline : t(`${role}Headline`);
   return (
     <div className="rise-in">
       <div className="mb-9 grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
         <div className="rounded-[28px] bg-primary px-7 py-8 text-primary-foreground shadow-[0_20px_45px_hsl(161_45%_25%_/_0.16)] sm:px-10 sm:py-10">
-          <div className="mb-10 flex items-center justify-between"><span className="rounded-full bg-primary-foreground/12 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em]">Good to see you</span><span className="font-mono-ui text-[11px] text-primary-foreground/65">24.06 / SETU</span></div>
-          <p className="mb-3 text-sm font-semibold text-primary-foreground/68">{formatRole(role)} dashboard</p>
-          <h1 data-testid="text-dashboard-headline" className="max-w-xl font-display text-4xl font-semibold leading-[1.04] tracking-[-0.06em] sm:text-6xl">{query.isLoading ? 'Getting your workspace ready…' : data.headline}</h1>
-          <div className="mt-9 flex flex-wrap gap-3"><Link href="/jobs" data-testid="link-dashboard-jobs" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-bold text-accent-foreground transition-transform hover:-translate-y-0.5">Find your next step <ArrowRight size={16} /></Link><button data-testid="button-dashboard-notify" onClick={() => notify('Your workspace is up to date')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary-foreground/20 px-5 text-sm font-bold text-primary-foreground hover:bg-primary-foreground/10">What’s new <Sparkles size={15} /></button></div>
+           <div className="mb-10 flex items-center justify-between"><span className="rounded-full bg-primary-foreground/12 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em]">{t('goodToSeeYou')}</span><span className="font-mono-ui text-[11px] text-primary-foreground/65">24.06 / SETU</span></div>
+           <p className="mb-3 text-sm font-semibold text-primary-foreground/68">{role === 'seeker' ? t('jobSeeker') : role === 'recruiter' ? t('recruiter') : t('administrator')} {t('dashboard')}</p>
+           <h1 data-testid="text-dashboard-headline" className="max-w-xl font-display text-4xl font-semibold leading-[1.04] tracking-[-0.06em] sm:text-6xl">{query.isLoading ? 'Getting your workspace ready…' : localizedHeadline}</h1>
+           <div className="mt-9 flex flex-wrap gap-3"><Link href="/jobs" data-testid="link-dashboard-jobs" className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-bold text-accent-foreground transition-transform hover:-translate-y-0.5">{t('findNextStep')} <ArrowRight size={16} /></Link><button data-testid="button-dashboard-notify" onClick={() => notify('Your workspace is up to date')} className="focus-ring inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary-foreground/20 px-5 text-sm font-bold text-primary-foreground hover:bg-primary-foreground/10">{t('whatsNew')} <Sparkles size={15} /></button></div>
         </div>
         <div className="relative overflow-hidden rounded-[28px] border border-border bg-secondary p-7 sm:p-9">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full border-[18px] border-accent/25" /><div className="absolute -bottom-16 -right-1 h-48 w-48 rounded-full border-[1px] border-primary/20" />
-          <p className="relative text-[11px] font-bold uppercase tracking-[0.2em] text-primary">A small nudge</p>
-          <h2 className="relative mt-5 max-w-xs font-display text-3xl font-semibold leading-tight tracking-[-0.05em]">Clarity compounds.</h2>
-          <p className="relative mt-4 max-w-sm text-sm leading-6 text-foreground/65">Every useful detail in your profile gives the right people a better reason to start a conversation.</p>
-          <Link href="/settings" data-testid="link-dashboard-profile" className="relative mt-8 inline-flex items-center gap-2 text-sm font-bold text-primary hover:gap-3 transition-all">Tune your profile <ArrowRight size={15} /></Link>
+           <p className="relative text-[11px] font-bold uppercase tracking-[0.2em] text-primary">{t('smallNudge')}</p>
+           <h2 className="relative mt-5 max-w-xs font-display text-3xl font-semibold leading-tight tracking-[-0.05em]">{t('clarityCompounds')}</h2>
+           <p className="relative mt-4 max-w-sm text-sm leading-6 text-foreground/65">{t('clarityDetail')}</p>
+           <Link href="/settings" data-testid="link-dashboard-profile" className="relative mt-8 inline-flex items-center gap-2 text-sm font-bold text-primary hover:gap-3 transition-all">{t('tuneProfile')} <ArrowRight size={15} /></Link>
         </div>
       </div>
       <div className="mb-10 grid gap-4 md:grid-cols-3">
@@ -321,8 +473,8 @@ function DashboardPage({ role, notify }: { role: Role; notify: (message: string)
       </div>
       {query.isError && <div className="mb-6"><ErrorState retry={() => query.refetch()} /></div>}
       <div className="grid gap-8 lg:grid-cols-[1.25fr_.75fr]">
-        <section><div className="mb-4 flex items-center justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">The thread so far</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em]">Recent activity</h2></div><Link href="/settings" data-testid="link-activity-settings" className="text-xs font-bold text-primary hover:underline">Manage alerts</Link></div><div className="divide-y divide-border rounded-2xl border border-border bg-card">{data.activity.map((item) => <div key={item.id} data-testid={`activity-item-${item.id}`} className="flex gap-4 p-5"><div className={cn('mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', item.tone === 'attention' ? 'bg-accent/18 text-foreground' : item.tone === 'positive' ? 'bg-primary/12 text-primary' : 'bg-secondary text-muted-foreground')}><Activity size={16} /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-bold">{item.title}</h3><span className="text-[11px] text-muted-foreground">{item.time}</span></div><p className="mt-1 text-sm text-muted-foreground">{item.detail}</p></div></div>)}</div></section>
-        <section className="rounded-2xl border border-border bg-card p-6"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Keep moving</p><h2 className="mt-2 font-display text-2xl font-semibold tracking-[-0.04em]">Your next useful action</h2><div className="mt-6 space-y-3">{role === 'seeker' && <><QuickAction icon={UserRound} title="Complete your profile" detail="Add one detail to lift your match quality." href="/settings" /><QuickAction icon={Search} title="Explore fresh roles" detail="12 new roles match your preferences." href="/jobs" /></>}{role === 'recruiter' && <><QuickAction icon={Plus} title="Open a new role" detail="Bring the next great person into view." href="/jobs" /><QuickAction icon={FileCheck2} title="Review candidates" detail="12 applications are waiting on you." href="/applications" /></>}{role === 'admin' && <><QuickAction icon={ShieldCheck} title="Clear moderation queue" detail="5 items need a decision today." href="/users" /><QuickAction icon={BriefcaseBusiness} title="Audit live listings" detail="Keep the marketplace trustworthy." href="/jobs" /></>}</div></section>
+         <section><div className="mb-4 flex items-center justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">The thread so far</p><h2 className="mt-1 font-display text-2xl font-semibold tracking-[-0.04em]">{t('recentActivity')}</h2></div><Link href="/settings" data-testid="link-activity-settings" className="text-xs font-bold text-primary hover:underline">{t('manageAlerts')}</Link></div><div className="divide-y divide-border rounded-2xl border border-border bg-card">{data.activity.map((item) => <div key={item.id} data-testid={`activity-item-${item.id}`} className="flex gap-4 p-5"><div className={cn('mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', item.tone === 'attention' ? 'bg-accent/18 text-foreground' : item.tone === 'positive' ? 'bg-primary/12 text-primary' : 'bg-secondary text-muted-foreground')}><Activity size={16} /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-sm font-bold">{item.title}</h3><span className="text-[11px] text-muted-foreground">{item.time}</span></div><p className="mt-1 text-sm text-muted-foreground">{item.detail}</p></div></div>)}</div></section>
+         <section className="rounded-2xl border border-border bg-card p-6"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">{t('keepMoving')}</p><h2 className="mt-2 font-display text-2xl font-semibold tracking-[-0.04em]">{t('nextUsefulAction')}</h2><div className="mt-6 space-y-3">{role === 'seeker' && <><QuickAction icon={UserRound} title={t('completeProfile')} detail="Add one detail to lift your match quality." href="/settings" /><QuickAction icon={Search} title={t('exploreFreshRoles')} detail="12 new roles match your preferences." href="/jobs" /></>}{role === 'recruiter' && <><QuickAction icon={Plus} title={t('openNewRole')} detail="Bring the next great person into view." href="/jobs" /><QuickAction icon={FileCheck2} title={t('reviewCandidates')} detail="12 applications are waiting on you." href="/applications" /></>}{role === 'admin' && <><QuickAction icon={ShieldCheck} title={t('clearModeration')} detail="5 items need a decision today." href="/users" /><QuickAction icon={BriefcaseBusiness} title={t('auditListings')} detail="Keep the marketplace trustworthy." href="/jobs" /></>}</div></section>
       </div>
     </div>
   );
@@ -391,16 +543,16 @@ function UsersPage({ notify }: { notify: (message: string) => void }) {
 }
 
 function SettingsPage({ role, notify }: { role: Role; notify: (message: string) => void }) {
-  const [language, setLanguage] = useState('English');
+  const { language, setLanguage, t } = useLanguage();
   const [notifications, setNotifications] = useState({ role: true, digest: false, product: true });
   const [saved, setSaved] = useState(false);
   const toggle = (key: keyof typeof notifications) => setNotifications((current) => ({ ...current, [key]: !current[key] }));
-  const save = () => { setSaved(true); notify('Your preferences are saved'); window.setTimeout(() => setSaved(false), 2200); };
-  return <div className="rise-in max-w-4xl"><SectionHeading eyebrow="Your preferences" title="Make this workspace yours" detail="Choose the language, rhythm, and profile details that make NokariSetu useful every time you return." /><div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]"><section className="rounded-2xl border border-border bg-card p-6"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground"><UserRound size={19} /></span><div><p className="font-bold">{role === 'admin' ? 'Nokari team' : role === 'recruiter' ? 'Aarav Mehta' : 'Maya Shah'}</p><p className="text-xs text-muted-foreground">{roleCopy[role].label} · Demo workspace</p></div></div><div className="mt-7 space-y-4"><Field name="profile-name" label="Display name" defaultValue={role === 'admin' ? 'Nokari team' : role === 'recruiter' ? 'Aarav Mehta' : 'Maya Shah'} /><Field name="profile-email" label="Email address" defaultValue={role === 'admin' ? 'team@nokarisetu.in' : role === 'recruiter' ? 'aarav@kathastudio.in' : 'maya.shah@mail.com'} type="email" /><Button data-testid="button-save-profile" variant="secondary" onClick={save} className="w-full">Save profile</Button></div></section><div className="space-y-6"><section className="rounded-2xl border border-border bg-card p-6"><div className="mb-5 flex items-center gap-3"><Globe2 size={18} className="text-primary" /><div><h2 className="font-display text-xl font-semibold">Language</h2><p className="text-xs text-muted-foreground">Your labels and guidance will follow this choice.</p></div></div><select data-testid="select-language" value={language} onChange={(e) => setLanguage(e.target.value)} className="focus-ring h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none"><option>English</option><option>हिन्दी</option><option>मराठी</option><option>বাংলা</option></select></section><section className="rounded-2xl border border-border bg-card p-6"><div className="mb-5 flex items-center gap-3"><Activity size={18} className="text-primary" /><div><h2 className="font-display text-xl font-semibold">Notifications</h2><p className="text-xs text-muted-foreground">Useful signals only, never noise.</p></div></div><div className="divide-y divide-border">{([['role', 'Role updates', 'When an application or listing changes'], ['digest', 'Weekly digest', 'A quiet Monday view of what matters'], ['product', 'Product notes', 'Occasional tips from the NokariSetu team']] as const).map(([key, title, detail]) => <div key={key} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"><div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div><button data-testid={`button-toggle-${key}`} aria-pressed={notifications[key]} onClick={() => toggle(key)} className={cn('focus-ring relative h-7 w-12 shrink-0 rounded-full transition-colors', notifications[key] ? 'bg-primary' : 'bg-muted')}><span className={cn('absolute top-1 h-5 w-5 rounded-full bg-card shadow-sm transition-transform', notifications[key] ? 'translate-x-6' : 'translate-x-1')} /></button></div>)}</div></section><div className="flex items-center justify-between gap-4"><span className={cn('text-xs font-bold text-primary transition-opacity', saved ? 'opacity-100' : 'opacity-0')}>Saved just now</span><Button data-testid="button-save-settings" onClick={save}><Check size={16} />Save preferences</Button></div></div></div></div>;
+  const save = () => { setSaved(true); notify(t('preferencesSaved')); window.setTimeout(() => setSaved(false), 2200); };
+  return <div className="rise-in max-w-4xl"><SectionHeading eyebrow={t('yourPreferences')} title={t('makeWorkspaceYours')} detail={t('preferencesDetail')} /><div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]"><section className="rounded-2xl border border-border bg-card p-6"><div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground"><UserRound size={19} /></span><div><p className="font-bold">{role === 'admin' ? 'Nokari team' : role === 'recruiter' ? 'Aarav Mehta' : 'Maya Shah'}</p><p className="text-xs text-muted-foreground">{role === 'seeker' ? t('jobSeeker') : role === 'recruiter' ? t('recruiter') : t('administrator')} · {t('demoWorkspace')}</p></div></div><div className="mt-7 space-y-4"><Field name="profile-name" label={t('displayName')} defaultValue={role === 'admin' ? 'Nokari team' : role === 'recruiter' ? 'Aarav Mehta' : 'Maya Shah'} /><Field name="profile-email" label={t('emailAddress')} defaultValue={role === 'admin' ? 'team@nokarisetu.in' : role === 'recruiter' ? 'aarav@kathastudio.in' : 'maya.shah@mail.com'} type="email" /><Button data-testid="button-save-profile" variant="secondary" onClick={save} className="w-full">{t('saveProfile')}</Button></div></section><div className="space-y-6"><section className="rounded-2xl border border-border bg-card p-6"><div className="mb-5 flex items-center gap-3"><Globe2 size={18} className="text-primary" /><div><h2 className="font-display text-xl font-semibold">{t('language')}</h2><p className="text-xs text-muted-foreground">{t('languageDetail')}</p></div></div><select data-testid="select-language" value={language} onChange={(e) => { const nextLanguage = e.target.value as Language; setLanguage(nextLanguage); notify(`${languageTranslations[nextLanguage].languageChanged}: ${nextLanguage}`); }} className="focus-ring h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none">{supportedLanguages.map((option) => <option key={option} value={option}>{option}</option>)}</select></section><section className="rounded-2xl border border-border bg-card p-6"><div className="mb-5 flex items-center gap-3"><Activity size={18} className="text-primary" /><div><h2 className="font-display text-xl font-semibold">{t('notifications')}</h2><p className="text-xs text-muted-foreground">{t('notificationsDetail')}</p></div></div><div className="divide-y divide-border">{([['role', t('roleUpdates'), t('roleUpdatesDetail')], ['digest', t('weeklyDigest'), t('weeklyDigestDetail')], ['product', t('productNotes'), t('productNotesDetail')]] as const).map(([key, title, detail]) => <div key={key} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"><div><p className="text-sm font-bold">{title}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div><button data-testid={`button-toggle-${key}`} aria-pressed={notifications[key]} onClick={() => toggle(key)} className={cn('focus-ring relative h-7 w-12 shrink-0 rounded-full transition-colors', notifications[key] ? 'bg-primary' : 'bg-muted')}><span className={cn('absolute top-1 h-5 w-5 rounded-full bg-card shadow-sm transition-transform', notifications[key] ? 'translate-x-6' : 'translate-x-1')} /></button></div>)}</div></section><div className="flex items-center justify-between gap-4"><span className={cn('text-xs font-bold text-primary transition-opacity', saved ? 'opacity-100' : 'opacity-0')}>{t('savedJustNow')}</span><Button data-testid="button-save-settings" onClick={save}><Check size={16} />{t('savePreferences')}</Button></div></div></div></div>;
 }
 
-function Field({ name, label, placeholder, required, defaultValue, value, onChange, type = 'text' }: { name: string; label: string; placeholder?: string; required?: boolean; defaultValue?: string; value?: string; onChange?: (event: ChangeEvent<HTMLInputElement>) => void; type?: string }) {
-  return <div><label htmlFor={name} className="mb-1.5 block text-xs font-bold text-muted-foreground">{label}</label><input id={name} name={name} data-testid={`input-${name}`} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue} value={value} onChange={onChange} className="focus-ring h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none placeholder:text-muted-foreground/60" /></div>;
+function Field({ name, label, placeholder, required, defaultValue, value, onChange, type = 'text', autoComplete }: { name: string; label: string; placeholder?: string; required?: boolean; defaultValue?: string; value?: string; onChange?: (event: ChangeEvent<HTMLInputElement>) => void; type?: string; autoComplete?: string }) {
+  return <div><label htmlFor={name} className="mb-1.5 block text-xs font-bold text-muted-foreground">{label}</label><input id={name} name={name} data-testid={`input-${name}`} type={type} autoComplete={autoComplete} placeholder={placeholder} required={required} defaultValue={defaultValue} value={value} onChange={onChange} className="focus-ring h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none placeholder:text-muted-foreground/60" /></div>;
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -417,11 +569,36 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function App() {
-  const [role, setRoleState] = useState<Role>(() => (window.localStorage.getItem('nokarisetu-role') as Role) || 'seeker');
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = window.localStorage.getItem('nokarisetu-language');
+    return supportedLanguages.includes(saved as Language) ? saved as Language : 'English';
+  });
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [notice, setNotice] = useState('');
-  const setRole = (nextRole: Role) => { setRoleState(nextRole); window.localStorage.setItem('nokarisetu-role', nextRole); setNotice(`${formatRole(nextRole)} view selected`); };
+  const setLanguage = (nextLanguage: Language) => { setLanguageState(nextLanguage); window.localStorage.setItem('nokarisetu-language', nextLanguage); };
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(async (response) => response.json() as Promise<{ user?: AuthUser | null }>)
+      .then((body) => { if (active) setAuthUser(body.user ?? null); })
+      .catch(() => { if (active) setAuthUser(null); })
+      .finally(() => { if (active) setAuthLoading(false); });
+    return () => { active = false; };
+  }, []);
+  const signOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
+    setAuthUser(null);
+    setNotice('');
+  };
   useEffect(() => { if (!notice) return; const timer = window.setTimeout(() => setNotice(''), 2800); return () => window.clearTimeout(timer); }, [notice]);
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Shell role={role} setRole={setRole} notify={setNotice}><RoutedErrorBoundary><Router role={role} notify={setNotice} /></RoutedErrorBoundary></Shell></WouterRouter>{notice && <div data-testid="status-toast" className="fixed bottom-5 right-5 z-[60] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl bg-foreground px-4 py-3 text-sm font-bold text-background shadow-xl"><Check size={17} className="text-accent" />{notice}</div>}<Toaster /></TooltipProvider></QueryClientProvider>;
+  const languageValue = useMemo(() => ({ language, setLanguage, t: (key: string) => languageTranslations[language][key] ?? languageTranslations.English[key] ?? key }), [language]);
+  const content = authLoading
+    ? <div className="flex min-h-[100dvh] items-center justify-center bg-background text-sm font-bold text-muted-foreground">Loading your secure workspace…</div>
+    : authUser
+      ? <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Shell role={authUser.role} notify={setNotice} onSignOut={signOut}><RoutedErrorBoundary><Router role={authUser.role} notify={setNotice} /></RoutedErrorBoundary></Shell></WouterRouter>
+      : <LoginPage onLogin={setAuthUser} />;
+  return <QueryClientProvider client={queryClient}><LanguageContext.Provider value={languageValue}><TooltipProvider>{content}{notice && authUser && <div data-testid="status-toast" className="fixed bottom-5 right-5 z-[60] flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl bg-foreground px-4 py-3 text-sm font-bold text-background shadow-xl"><Check size={17} className="text-accent" />{notice}</div>}<Toaster /></TooltipProvider></LanguageContext.Provider></QueryClientProvider>;
 }
 
 export default App;

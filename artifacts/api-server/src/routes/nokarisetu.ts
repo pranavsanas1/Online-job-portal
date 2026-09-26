@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { requireRole, type AuthUser } from "./auth";
 import {
   CreateApplicationBody,
   CreateJobBody,
@@ -154,6 +155,11 @@ const dashboardByRole = {
 
 router.get("/dashboard", (req, res) => {
   const { role } = GetDashboardQueryParams.parse(req.query);
+  const user = res.locals.authUser as AuthUser;
+  if (role !== user.role && user.role !== "admin") {
+    res.status(403).json({ error: "You cannot view another role's dashboard" });
+    return;
+  }
   res.json(dashboardByRole[role]);
 });
 
@@ -172,6 +178,7 @@ router.get("/jobs", (req, res) => {
 });
 
 router.post("/jobs", (req, res) => {
+  if (!requireRole(res, "recruiter")) return;
   const body = CreateJobBody.parse(req.body);
   const job = {
     id: jobs.length + 1,
@@ -186,6 +193,11 @@ router.post("/jobs", (req, res) => {
 
 router.get("/applications", (req, res) => {
   const query = ListApplicationsQueryParams.parse(req.query);
+  const user = res.locals.authUser as AuthUser;
+  if (query.role !== user.role && user.role !== "admin") {
+    res.status(403).json({ error: "You cannot view another role's applications" });
+    return;
+  }
   const filtered = query.status
     ? applications.filter((application) => application.status === query.status)
     : applications;
@@ -193,6 +205,7 @@ router.get("/applications", (req, res) => {
 });
 
 router.post("/applications", (req, res) => {
+  if (!requireRole(res, "seeker")) return;
   const body = CreateApplicationBody.parse(req.body);
   const job = jobs.find((item) => item.id === body.jobId);
   const application = {
@@ -209,6 +222,7 @@ router.post("/applications", (req, res) => {
 });
 
 router.patch("/applications/:id/status", (req, res) => {
+  if (!requireRole(res, "recruiter")) return;
   const { id } = UpdateApplicationStatusParams.parse(req.params);
   const { status } = UpdateApplicationStatusBody.parse(req.body);
   const application = applications.find((item) => item.id === id);
@@ -221,6 +235,7 @@ router.patch("/applications/:id/status", (req, res) => {
 });
 
 router.get("/users", (req, res) => {
+  if (!requireRole(res, "admin")) return;
   const query = ListUsersQueryParams.parse(req.query);
   const filtered = query.status
     ? users.filter((user) => user.status === query.status)
@@ -229,6 +244,7 @@ router.get("/users", (req, res) => {
 });
 
 router.patch("/users/:id/status", (req, res) => {
+  if (!requireRole(res, "admin")) return;
   const { id } = UpdateUserStatusParams.parse(req.params);
   const { status } = UpdateUserStatusBody.parse(req.body);
   const user = users.find((item) => item.id === id);
